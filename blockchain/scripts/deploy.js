@@ -10,13 +10,9 @@ async function main() {
   const balance = await deployer.provider.getBalance(deployer.address);
   console.log("Account balance:", hre.ethers.formatEther(balance), "ETH\n");
 
-  // Oracle signer address (same as deployer for demo, use separate in production)
-  const oracleSignerAddress = process.env.ORACLE_SIGNER_ADDRESS || deployer.address;
-  console.log("Oracle signer:", oracleSignerAddress);
-
-  // Deploy contract with oracle signer
+  // Deploy contract (no constructor args - oracle signer set separately)
   const DeepfakeVerification = await hre.ethers.getContractFactory("DeepfakeVerification");
-  const contract = await DeepfakeVerification.deploy(oracleSignerAddress);
+  const contract = await DeepfakeVerification.deploy();
 
   await contract.waitForDeployment();
   
@@ -28,9 +24,6 @@ async function main() {
   const owner = await contract.owner();
   console.log("Contract owner:", owner);
   
-  const oracleSigner = await contract.getOracleSigner();
-  console.log("Oracle signer:", oracleSigner);
-  
   const stats = await contract.getStats();
   console.log("Initial stats - DIDs:", stats[0].toString(), ", Verifications:", stats[1].toString());
   
@@ -40,7 +33,6 @@ async function main() {
     network: hre.network.name,
     contractAddress: contractAddress,
     deployer: deployer.address,
-    oracleSigner: oracleSignerAddress,
     deployedAt: new Date().toISOString()
   };
   

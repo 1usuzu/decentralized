@@ -1,146 +1,169 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/**
- * @title DeepfakeVerification
- * @dev Smart contract cho hệ thống xác thực Deepfake với DID
- * 
- * Chức năng:
- * 1. Đăng ký DID (Decentralized Identifier)
- * 2. Lưu kết quả verification lên blockchain
- * 3. Verify credential bằng ZK Proof
- * 4. Query lịch sử verification
- */
 contract DeepfakeVerification {
     
-    // ============ STRUCTS ============
-    
-    // DID Document structure
     struct DIDDocument {
-        address owner;              // Wallet address của owner
-        string did;                 // DID string (did:deepfake:...)
-        string publicKeyBase58;     // Public key
-        bool isActive;              // Còn active không
-        uint256 createdAt;          // Timestamp tạo
-        uint256 updatedAt;          // Timestamp update
+        address owner;
+        string did;
+        string publicKeyBase58;
+        bool isActive;
+        uint256 createdAt;
+        uint256 updatedAt;
     }
     
-    // Verification Result structure
     struct VerificationResult {
-        bytes32 imageHash;          // SHA256 hash của ảnh
-        string subjectDid;          // DID của subject
-        string issuerDid;           // DID của issuer
-        bool isReal;                // true = REAL, false = FAKE
-        uint256 confidence;         // Confidence * 10000 (để lưu decimal, ví dụ 9182 = 91.82%)
-        uint256 timestamp;          // Thời điểm verify
-        bytes32 credentialHash;     // Hash của Verifiable Credential
+        bytes32 imageHash;
+        string subjectDid;
+        string issuerDid;
+        bool isReal;
+        uint256 confidence;
+        uint256 timestamp;
+        bytes32 credentialHash;
     }
     
-    // ZK Proof structure (simplified)
-    struct ZKProof {
-        bytes32 proofHash;          // Hash của proof
-        bytes32 publicInputHash;    // Hash của public inputs
-        bool isValid;               // Proof đã được verify chưa
-        uint256 timestamp;          // Timestamp
-    }
-    
-    // ============ STATE VARIABLES ============
-    
-    // Mapping từ wallet address → DID Document
     mapping(address => DIDDocument) public didDocuments;
-    
-    // Mapping từ DID string → wallet address
     mapping(string => address) public didToAddress;
-    
-    // Mapping từ image hash → Verification Result
     mapping(bytes32 => VerificationResult) public verificationResults;
-    
-    // Mapping từ image hash → ZK Proof
-    mapping(bytes32 => ZKProof) public zkProofs;
-    
-    // Danh sách các issuer được authorize
     mapping(address => bool) public authorizedIssuers;
     
-    // Owner của contract
     address public owner;
-    
-    // Oracle signer address (AI Server's wallet)
-    address public oracleSigner;
-    
-    // Counters
     uint256 public totalDIDs;
     uint256 public totalVerifications;
     
-    // ============ EVENTS ============
-    
     event DIDRegistered(address indexed owner, string did, uint256 timestamp);
-    event DIDUpdated(address indexed owner, string did, uint256 timestamp);
-    event DIDDeactivated(address indexed owner, string did, uint256 timestamp);
-    
-    event VerificationRecorded(
-        bytes32 indexed imageHash, 
-        string subjectDid, 
-        bool isReal, 
-        uint256 confidence,
-        uint256 timestamp
-    );
-    
-    event ZKProofSubmitted(bytes32 indexed imageHash, bytes32 proofHash, uint256 timestamp);
-    event ZKProofVerified(bytes32 indexed imageHash, bool isValid, uint256 timestamp);
-    
-    event IssuerAuthorized(address indexed issuer, uint256 timestamp);
-    event IssuerRevoked(address indexed issuer, uint256 timestamp);
-    
-    // ============ MODIFIERS ============
+    event VerificationRecorded(bytes32 indexed imageHash, string subjectDid, bool isReal, uint256 confidence, uint256 timestamp);
     
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can call this function");
-        _;
-    }
-    
-    modifier onlyAuthorizedIssuer() {
-        require(authorizedIssuers[msg.sender], "Not an authorized issuer");
+        require(msg.sender == owner, "Only owner");
         _;
     }
     
     modifier didExists(address _owner) {
-        require(didDocuments[_owner].isActive, "DID does not exist or is deactivated");
+        require(didDocuments[_owner].isActive, "DID does not exist");
         _;
     }
     
-    // ============ CONSTRUCTOR ============
-    
-    constructor(address _oracleSigner) {
+    constructor() {
         owner = msg.sender;
-        oracleSigner = _oracleSigner;
-        authorizedIssuers[msg.sender] = true;
+        authorizedIssuers[msg.sender] = true; 
     }
     
-    // ============ ADMIN FUNCTIONS ============
-    
-    /**
-     * @dev Cập nhật Oracle Signer (chỉ owner)
-     */
-    function setOracleSigner(address _newSigner) external onlyOwner {
-        require(_newSigner != address(0), "Invalid signer address");
-        oracleSigner = _newSigner;
+    // --- HELPER FUNCTIONS CHO CHỮ KÝ ---
+    function splitSignature(bytes memory sig) internal pure returns (bytes32 r, bytes32 s, uint8 v) {
+        require(sig.length == 65, "Invalid signature length");
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
     }
     
-    // ============ DID MANAGEMENT ============
+    function toAsciiString(address x) internal pure returns (string memory) {
+        bytes memory s = new bytes(42);
+        s[0] = '0';
+        s[1] = 'x';
+        for (uint i = 0; i < 20; i++) {
+            bytes1 b = bytes1(uint8(uint(uint160(x)) / (2**(8*(19 - i)))));
+            bytes1 hi = bytes1(uint8(b) / 16);
+            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
+            s[2+i*2] = char(hi);
+            s[3+i*2] = char(lo);
+        }
+        return string(s);
+    }
     
-    /**
-     * @dev Đăng ký DID mới
-     * @param _did DID string (ví dụ: did:deepfake:abc123)
-     * @param _publicKeyBase58 Public key encoded in base58
-     */
-    function registerDID(
-        string calldata _did, 
-        string calldata _publicKeyBase58
-    ) external {
+    function char(bytes1 b) internal pure returns (bytes1 c) {
+        if (uint8(b) < 10) return bytes1(uint8(b) + 0x30);
+        else return bytes1(uint8(b) + 0x57);
+    }
+    
+    function bytes32ToHexString(bytes32 _bytes) internal pure returns (string memory) {
+        bytes memory s = new bytes(64);
+        for (uint i = 0; i < 32; i++) {
+            bytes1 b = _bytes[i];
+            bytes1 hi = bytes1(uint8(b) / 16);
+            bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
+            s[i*2] = char(hi);
+            s[i*2+1] = char(lo);
+        }
+        return string(s);
+    }
+    
+    function uint2str(uint256 _i) internal pure returns (string memory) {
+        if (_i == 0) return "0";
+        uint256 j = _i;
+        uint256 length;
+        while (j != 0) { length++; j /= 10; }
+        bytes memory bstr = new bytes(length);
+        uint256 k = length;
+        while (_i != 0) {
+            k = k-1;
+            uint8 temp = uint8(48 + _i % 10);
+            bstr[k] = bytes1(temp);
+            _i /= 10;
+        }
+        return string(bstr);
+    }
+
+    function recoverSigner(bytes32 _ethSignedMessageHash, bytes memory _signature) internal pure returns (address) {
+        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
+        return ecrecover(_ethSignedMessageHash, v, r, s);
+    }
+
+    // --- LOGIC CHÍNH: XÁC THỰC VÀ GHI ---
+    function recordVerification(
+        bytes32 _imageHash,
+        bool _isReal,
+        uint256 _confidence,
+        bytes calldata _signature  // <--- Nhận chữ ký từ Frontend
+    ) external didExists(msg.sender) {
+        
+        // 1. Tái tạo Message Hash (Phải khớp 100% với cách Python backend tạo chuỗi)
+        // Format: "UserAddress:ImageHash:IsReal"
+        string memory isRealStr = _isReal ? "true" : "false";
+        
+        // Convert bytes32 to hex string to match backend format
+        string memory hashHex = bytes32ToHexString(_imageHash);
+        
+        // Hash nội dung thô - format: "0xAddress:hexHash:true/false"
+        bytes32 messageHash = keccak256(abi.encodePacked(
+            toAsciiString(msg.sender), ":", hashHex, ":", isRealStr
+        ));
+        
+        // Thêm prefix Ethereum ("\x19Ethereum Signed Message:\n{length}")
+        // Độ dài message = 42 (address) + 1 (:) + 64 (hash) + 1 (:) + 4/5 (true/false) = 112/113
+        uint256 msgLen = 42 + 1 + 64 + 1 + bytes(isRealStr).length;
+        bytes32 ethSignedMessageHash = keccak256(abi.encodePacked(
+            "\x19Ethereum Signed Message:\n",
+            uint2str(msgLen),
+            toAsciiString(msg.sender), ":", hashHex, ":", isRealStr
+        ));
+
+        // 2. Tìm ra địa chỉ người đã ký
+        address signer = recoverSigner(ethSignedMessageHash, _signature);
+
+        // 3. KIỂM TRA: Người ký có phải là Server (Authorized Issuer) không?
+        require(authorizedIssuers[signer], "Invalid signature! Data corrupted or fake.");
+
+        // 4. Lưu kết quả
+        verificationResults[_imageHash] = VerificationResult({
+            imageHash: _imageHash,
+            subjectDid: didDocuments[msg.sender].did,
+            issuerDid: didDocuments[signer].did, // Issuer là Server
+            isReal: _isReal,
+            confidence: _confidence,
+            timestamp: block.timestamp,
+            credentialHash: keccak256(abi.encodePacked(_signature))
+        });
+        
+        totalVerifications++;
+        emit VerificationRecorded(_imageHash, didDocuments[msg.sender].did, _isReal, _confidence, block.timestamp);
+    }
+    
+    // --- CÁC HÀM KHÁC (GIỮ NGUYÊN HOẶC RÚT GỌN) ---
+    function registerDID(string calldata _did, string calldata _publicKeyBase58) external {
         require(!didDocuments[msg.sender].isActive, "DID already registered");
-        require(didToAddress[_did] == address(0), "DID already taken");
-        require(bytes(_did).length > 0, "DID cannot be empty");
-        require(bytes(_publicKeyBase58).length > 0, "Public key cannot be empty");
         
         didDocuments[msg.sender] = DIDDocument({
             owner: msg.sender,
@@ -150,253 +173,20 @@ contract DeepfakeVerification {
             createdAt: block.timestamp,
             updatedAt: block.timestamp
         });
-        
         didToAddress[_did] = msg.sender;
         totalDIDs++;
-        
         emit DIDRegistered(msg.sender, _did, block.timestamp);
     }
-    
-    /**
-     * @dev Cập nhật public key của DID
-     * @param _newPublicKeyBase58 Public key mới
-     */
-    function updateDIDPublicKey(
-        string calldata _newPublicKeyBase58
-    ) external didExists(msg.sender) {
-        require(bytes(_newPublicKeyBase58).length > 0, "Public key cannot be empty");
-        
-        didDocuments[msg.sender].publicKeyBase58 = _newPublicKeyBase58;
-        didDocuments[msg.sender].updatedAt = block.timestamp;
-        
-        emit DIDUpdated(msg.sender, didDocuments[msg.sender].did, block.timestamp);
-    }
-    
-    /**
-     * @dev Vô hiệu hóa DID
-     */
-    function deactivateDID() external didExists(msg.sender) {
-        string memory did = didDocuments[msg.sender].did;
-        
-        didDocuments[msg.sender].isActive = false;
-        didDocuments[msg.sender].updatedAt = block.timestamp;
-        delete didToAddress[did];
-        
-        emit DIDDeactivated(msg.sender, did, block.timestamp);
-    }
-    
-    /**
-     * @dev Resolve DID → DID Document
-     * @param _did DID string
-     */
-    function resolveDID(string calldata _did) external view returns (DIDDocument memory) {
-        address didOwner = didToAddress[_did];
-        require(didOwner != address(0), "DID not found");
-        require(didDocuments[didOwner].isActive, "DID is deactivated");
-        
-        return didDocuments[didOwner];
-    }
-    
-    // ============ VERIFICATION MANAGEMENT ============
-    
-    /**
-     * @dev Ghi kết quả verification lên blockchain (cần signature từ Oracle)
-     * @param _imageHash SHA256 hash của ảnh
-     * @param _subjectDid DID của subject
-     * @param _isReal true = REAL, false = FAKE
-     * @param _confidence Confidence * 10000 (ví dụ: 9182 = 91.82%)
-     * @param _credentialHash Hash của Verifiable Credential
-     * @param _signature Signature từ Oracle Server để verify kết quả
-     */
-    function recordVerification(
-        bytes32 _imageHash,
-        string calldata _subjectDid,
-        bool _isReal,
-        uint256 _confidence,
-        bytes32 _credentialHash,
-        bytes calldata _signature
-    ) external didExists(msg.sender) {
-        require(_imageHash != bytes32(0), "Image hash cannot be empty");
-        require(_confidence <= 10000, "Confidence must be <= 10000");
-        
-        // Verify signature from Oracle
-        bytes32 messageHash = keccak256(abi.encodePacked(
-            _imageHash,
-            _isReal,
-            _confidence
-        ));
-        bytes32 ethSignedHash = keccak256(abi.encodePacked(
-            "\x19Ethereum Signed Message:\n32",
-            messageHash
-        ));
-        
-        address recoveredSigner = recoverSigner(ethSignedHash, _signature);
-        require(recoveredSigner == oracleSigner, "Invalid oracle signature");
-        
-        verificationResults[_imageHash] = VerificationResult({
-            imageHash: _imageHash,
-            subjectDid: _subjectDid,
-            issuerDid: didDocuments[msg.sender].did,
-            isReal: _isReal,
-            confidence: _confidence,
-            timestamp: block.timestamp,
-            credentialHash: _credentialHash
-        });
-        
-        totalVerifications++;
-        
-        emit VerificationRecorded(_imageHash, _subjectDid, _isReal, _confidence, block.timestamp);
-    }
-    
-    /**
-     * @dev Query kết quả verification
-     * @param _imageHash SHA256 hash của ảnh
-     */
+
     function getVerification(bytes32 _imageHash) external view returns (VerificationResult memory) {
-        require(verificationResults[_imageHash].timestamp > 0, "Verification not found");
         return verificationResults[_imageHash];
     }
     
-    /**
-     * @dev Kiểm tra ảnh đã được verify chưa
-     * @param _imageHash SHA256 hash của ảnh
-     */
-    function isImageVerified(bytes32 _imageHash) external view returns (bool) {
-        return verificationResults[_imageHash].timestamp > 0;
-    }
-    
-    // ============ ZK PROOF MANAGEMENT ============
-    
-    /**
-     * @dev Submit ZK Proof
-     * @param _imageHash Hash của ảnh
-     * @param _proofHash Hash của ZK proof
-     * @param _publicInputHash Hash của public inputs
-     */
-    function submitZKProof(
-        bytes32 _imageHash,
-        bytes32 _proofHash,
-        bytes32 _publicInputHash
-    ) external {
-        require(_imageHash != bytes32(0), "Image hash cannot be empty");
-        require(_proofHash != bytes32(0), "Proof hash cannot be empty");
-        
-        zkProofs[_imageHash] = ZKProof({
-            proofHash: _proofHash,
-            publicInputHash: _publicInputHash,
-            isValid: false,
-            timestamp: block.timestamp
-        });
-        
-        emit ZKProofSubmitted(_imageHash, _proofHash, block.timestamp);
-    }
-    
-    /**
-     * @dev Verify ZK Proof (simplified - trong thực tế cần ZK verifier)
-     * @param _imageHash Hash của ảnh
-     * @param _expectedProofHash Expected proof hash để verify
-     */
-    function verifyZKProof(
-        bytes32 _imageHash,
-        bytes32 _expectedProofHash
-    ) external view returns (bool) {
-        ZKProof memory proof = zkProofs[_imageHash];
-        require(proof.timestamp > 0, "ZK Proof not found");
-        
-        // Simplified verification - compare hashes
-        // Trong thực tế cần implement ZK verifier (SNARK/STARK)
-        return proof.proofHash == _expectedProofHash;
-    }
-    
-    // ============ ADMIN FUNCTIONS ============
-    
-    /**
-     * @dev Authorize một issuer mới
-     * @param _issuer Address của issuer
-     */
     function authorizeIssuer(address _issuer) external onlyOwner {
-        require(!authorizedIssuers[_issuer], "Already authorized");
         authorizedIssuers[_issuer] = true;
-        emit IssuerAuthorized(_issuer, block.timestamp);
     }
-    
-    /**
-     * @dev Thu hồi quyền issuer
-     * @param _issuer Address của issuer
-     */
-    function revokeIssuer(address _issuer) external onlyOwner {
-        require(authorizedIssuers[_issuer], "Not authorized");
-        require(_issuer != owner, "Cannot revoke owner");
-        authorizedIssuers[_issuer] = false;
-        emit IssuerRevoked(_issuer, block.timestamp);
-    }
-    
-    /**
-     * @dev Transfer ownership
-     * @param _newOwner Address của owner mới
-     */
-    function transferOwnership(address _newOwner) external onlyOwner {
-        require(_newOwner != address(0), "Invalid address");
-        authorizedIssuers[owner] = false;
-        owner = _newOwner;
-        authorizedIssuers[_newOwner] = true;
-    }
-    
-    // ============ VIEW FUNCTIONS ============
-    
-    /**
-     * @dev Lấy thông tin DID của caller
-     */
-    function getMyDID() external view returns (DIDDocument memory) {
-        require(didDocuments[msg.sender].isActive, "No active DID");
-        return didDocuments[msg.sender];
-    }
-    
-    /**
-     * @dev Kiểm tra address có phải authorized issuer không
-     */
-    function isAuthorizedIssuer(address _address) external view returns (bool) {
-        return authorizedIssuers[_address];
-    }
-    
-    /**
-     * @dev Lấy statistics
-     */
-    function getStats() external view returns (uint256 _totalDIDs, uint256 _totalVerifications) {
+
+    function getStats() external view returns (uint256, uint256) {
         return (totalDIDs, totalVerifications);
-    }
-    
-    // ============ SIGNATURE RECOVERY ============
-    
-    /**
-     * @dev Recover signer address from signature
-     */
-    function recoverSigner(bytes32 _ethSignedHash, bytes memory _signature) internal pure returns (address) {
-        require(_signature.length == 65, "Invalid signature length");
-        
-        bytes32 r;
-        bytes32 s;
-        uint8 v;
-        
-        assembly {
-            r := mload(add(_signature, 32))
-            s := mload(add(_signature, 64))
-            v := byte(0, mload(add(_signature, 96)))
-        }
-        
-        if (v < 27) {
-            v += 27;
-        }
-        
-        require(v == 27 || v == 28, "Invalid signature v value");
-        
-        return ecrecover(_ethSignedHash, v, r, s);
-    }
-    
-    /**
-     * @dev Get oracle signer address
-     */
-    function getOracleSigner() external view returns (address) {
-        return oracleSigner;
     }
 }
