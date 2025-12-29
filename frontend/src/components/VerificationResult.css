@@ -1,0 +1,222 @@
+/* Verification Result Component */
+.verification-result {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+  border-top: 4px solid;
+}
+
+.verification-result.real {
+  border-top-color: var(--success);
+}
+
+.verification-result.fake {
+  border-top-color: var(--danger);
+}
+
+/* Result Header */
+.result-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.result-icon {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.verification-result.real .result-icon {
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--success);
+}
+
+.verification-result.fake .result-icon {
+  background: rgba(220, 38, 38, 0.1);
+  color: var(--danger);
+}
+
+.result-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.result-title h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.verification-result.real .result-title h3 {
+  color: var(--success);
+}
+
+.verification-result.fake .result-title h3 {
+  color: var(--danger);
+}
+
+.result-title p {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+}
+
+/* Confidence Section */
+.confidence-section {
+  margin-bottom: 24px;
+}
+
+.confidence-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.confidence-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-700);
+}
+
+.confidence-value {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--gray-900);
+}
+
+.confidence-bar {
+  height: 8px;
+  background: var(--gray-200);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.confidence-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.5s ease;
+}
+
+.verification-result.real .confidence-fill {
+  background: var(--success);
+}
+
+.verification-result.fake .confidence-fill {
+  background: var(--danger);
+}
+
+/* Details Section */
+.details-section {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+}
+
+.detail-label {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.detail-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-900);
+}
+
+/* Blockchain Section */
+.blockchain-section {
+  padding-top: 20px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.blockchain-header {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 12px;
+}
+
+.blockchain-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+}
+
+.blockchain-success {
+  background: rgba(5, 150, 105, 0.05);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+}
+
+.blockchain-pending {
+  background: var(--gray-50);
+  border: 1px solid var(--gray-200);
+}
+
+.status-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.blockchain-success .status-icon {
+  color: var(--success);
+}
+
+.blockchain-pending .status-icon {
+  color: var(--gray-400);
+}
+
+.status-details {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.status-text {
+  font-size: 0.875rem;
+  color: var(--gray-700);
+}
+
+.tx-link {
+  font-size: 0.8125rem;
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.tx-link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .details-section {
+    grid-template-columns: 1fr;
+  }
+  
+  .result-header {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+}

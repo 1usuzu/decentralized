@@ -1,0 +1,249 @@
+/* Wallet Connect Component */
+.wallet-connect {
+  background: white;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+/* Not Connected State */
+.connect-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.connect-icon {
+  width: 48px;
+  height: 48px;
+  background: var(--gray-100);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.connect-icon svg {
+  width: 24px;
+  height: 24px;
+  color: var(--gray-500);
+}
+
+.connect-section h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--gray-900);
+  margin-bottom: 8px;
+}
+
+.connect-section p {
+  font-size: 0.875rem;
+  color: var(--gray-500);
+  margin-bottom: 20px;
+  max-width: 400px;
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 20px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: var(--radius);
+  border: none;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: var(--primary);
+  color: white;
+}
+
+.btn-primary:hover {
+  background: var(--primary-dark);
+}
+
+.btn-secondary {
+  background: var(--gray-100);
+  color: var(--gray-700);
+  border: 1px solid var(--gray-200);
+}
+
+.btn-secondary:hover {
+  background: var(--gray-200);
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--gray-600);
+  border: 1px solid var(--gray-300);
+  padding: 8px 16px;
+}
+
+.btn-outline:hover {
+  background: var(--gray-50);
+  border-color: var(--gray-400);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Connected State */
+.connected-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.account-info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+}
+
+.account-avatar {
+  width: 40px;
+  height: 40px;
+  background: var(--primary-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.account-avatar svg {
+  width: 20px;
+  height: 20px;
+  color: white;
+}
+
+.account-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.account-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.account-address {
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--gray-900);
+}
+
+/* DID Section */
+.did-section {
+  padding: 16px;
+  background: var(--gray-50);
+  border-radius: var(--radius);
+  border: 1px solid var(--gray-200);
+}
+
+.did-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.warning-icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--gray-400);
+}
+
+.did-warning span {
+  font-size: 0.875rem;
+  color: var(--gray-600);
+}
+
+.did-active {
+  background: rgba(5, 150, 105, 0.05);
+  border-color: var(--success);
+}
+
+.did-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.did-icon {
+  width: 36px;
+  height: 36px;
+  background: var(--success);
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.did-icon svg {
+  width: 18px;
+  height: 18px;
+  color: white;
+}
+
+.did-details {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.did-label {
+  font-size: 0.75rem;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.did-value {
+  font-family: 'SF Mono', Monaco, monospace;
+  font-size: 0.8125rem;
+  color: var(--gray-700);
+}
+
+.did-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 9999px;
+}
+
+.did-status.active {
+  background: rgba(5, 150, 105, 0.1);
+  color: var(--success);
+}
+
+@media (max-width: 640px) {
+  .account-info {
+    flex-wrap: wrap;
+  }
+  
+  .account-info .btn-outline {
+    width: 100%;
+    margin-top: 8px;
+  }
+}
