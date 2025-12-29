@@ -44,6 +44,19 @@ class DIDManager:
         """Create DID from public key"""
         return f"did:{self.did_method}:{public_key_base58}"
     
+    def validate_did(self, did: str) -> bool:
+        """Validate DID format: did:method:identifier"""
+        if not did or not isinstance(did, str):
+            return False
+        parts = did.split(':')
+        if len(parts) < 3:
+            return False
+        if parts[0] != 'did':
+            return False
+        if not parts[1] or not parts[2]:
+            return False
+        return True
+    
     def create_did_document(
         self, 
         did: str, 
@@ -101,17 +114,19 @@ class DIDManager:
             'keypair': keypair
         }
     
-    def export_did(self, did_data: Dict, filepath: str):
-        """Export DID data to JSON file"""
+    def export_did(self, did_data: Dict, filepath: str, include_private_key: bool = False):
+        """Export DID data to JSON file. Private key excluded by default for security."""
         export_data = {
             'did': did_data['did'],
             'did_document': did_data['did_document'],
             'keypair': {
-                'private_key_bytes': did_data['keypair']['private_key_bytes'],
                 'public_key_bytes': did_data['keypair']['public_key_bytes'],
                 'public_key_base58': did_data['keypair']['public_key_base58']
             }
         }
+        
+        if include_private_key:
+            export_data['keypair']['private_key_bytes'] = did_data['keypair']['private_key_bytes']
         
         with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(export_data, f, indent=2, ensure_ascii=False)

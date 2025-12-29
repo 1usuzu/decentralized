@@ -199,7 +199,7 @@ contract DeepfakeVerification {
         bool _isReal,
         uint256 _confidence,
         bytes32 _credentialHash
-    ) external onlyAuthorizedIssuer {
+    ) external didExists(msg.sender) {
         require(_imageHash != bytes32(0), "Image hash cannot be empty");
         require(_confidence <= 10000, "Confidence must be <= 10000");
         

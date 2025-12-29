@@ -21,6 +21,9 @@ const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x00000000000
 // Backend API URL
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+// Expected chain ID (Polygon Amoy Testnet = 80002)
+const EXPECTED_CHAIN_ID = import.meta.env.VITE_CHAIN_ID || "80002";
+
 function App() {
   const [account, setAccount] = useState(null);
   const [contract, setContract] = useState(null);
@@ -28,6 +31,7 @@ function App() {
   const [verificationResult, setVerificationResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ totalDIDs: 0, totalVerifications: 0 });
+  const [networkError, setNetworkError] = useState(null);
 
   // Connect wallet
   const connectWallet = async () => {
@@ -38,6 +42,15 @@ function App() {
 
     try {
       const provider = new ethers.BrowserProvider(window.ethereum);
+      
+      // Check network
+      const network = await provider.getNetwork();
+      if (network.chainId.toString() !== EXPECTED_CHAIN_ID) {
+        setNetworkError(`Sai network. Vui lòng chuyển sang Polygon Amoy (Chain ID: ${EXPECTED_CHAIN_ID})`);
+        return;
+      }
+      setNetworkError(null);
+      
       const accounts = await provider.send("eth_requestAccounts", []);
       const signer = await provider.getSigner();
       
@@ -198,6 +211,20 @@ function App() {
             Sử dụng AI để phát hiện hình ảnh giả mạo, kết hợp với định danh phi tập trung và lưu trữ trên blockchain
           </p>
         </div>
+
+        {/* Network Error */}
+        {networkError && (
+          <div className="network-error" style={{
+            backgroundColor: '#fee2e2',
+            color: '#991b1b',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            marginBottom: '16px',
+            textAlign: 'center'
+          }}>
+            {networkError}
+          </div>
+        )}
 
         {/* Wallet Connection */}
         <WalletConnect 

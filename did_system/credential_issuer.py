@@ -47,9 +47,9 @@ class CredentialIssuer:
                 "imageHash": image_hash,
                 "detectionResult": {
                     "label": detection_result.get('label', 'UNKNOWN'),
-                    "confidence": detection_result.get('confidence', 0.0),
-                    "realProbability": detection_result.get('real_prob', 0.0),
-                    "fakeProbability": detection_result.get('fake_prob', 0.0),
+                    "confidence": round(detection_result.get('confidence', 0.0), 6),
+                    "realProbability": round(detection_result.get('real_prob', 0.0), 6),
+                    "fakeProbability": round(detection_result.get('fake_prob', 0.0), 6),
                     "timestamp": issued_at.isoformat()
                 }
             }
@@ -86,9 +86,18 @@ class CredentialIssuer:
         credential: Dict, 
         issuer_public_key: ed25519.Ed25519PublicKey
     ) -> bool:
-        """Verify credential signature"""
+        """Verify credential signature and expiration"""
         if 'proof' not in credential:
             return False
+        
+        # Check expiration
+        if 'expirationDate' in credential:
+            try:
+                expiration = datetime.fromisoformat(credential['expirationDate'].replace('Z', '+00:00'))
+                if datetime.now(timezone.utc) > expiration:
+                    return False
+            except (ValueError, TypeError):
+                pass
         
         proof = credential.pop('proof')
         

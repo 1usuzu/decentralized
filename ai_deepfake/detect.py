@@ -6,14 +6,24 @@ import torch
 import torch.nn as nn
 from torchvision import transforms, models
 from PIL import Image
+from pathlib import Path
 
 
 class DeepfakeDetector:
     """EfficientNet-B0 based deepfake detector with temperature scaling"""
     
-    def __init__(self, model_path="d:/Code/face/ai_deepfake/models/best_model.pth", temperature=3.5):
+    def __init__(self, model_path=None, temperature=3.5):
         self.device = 'cuda' if torch.cuda.is_available() else 'cpu'
         self.temperature = temperature
+        
+        # Default model path
+        if model_path is None:
+            model_path = Path(__file__).parent / "models" / "best_model.pth"
+        else:
+            model_path = Path(model_path)
+        
+        if not model_path.exists():
+            raise FileNotFoundError(f"Model not found: {model_path}")
         
         # Load model
         self.model = models.efficientnet_b0(weights=None)

@@ -7,7 +7,10 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-sys.path.append(str(Path(__file__).parent.parent / "ai_deepfake"))
+# Add ai_deepfake to path for import
+_ai_path = Path(__file__).parent.parent / "ai_deepfake"
+if _ai_path.exists():
+    sys.path.insert(0, str(_ai_path))
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -18,6 +21,15 @@ import tempfile
 from detect import DeepfakeDetector
 
 detector = None
+
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+ALLOWED_MAGIC_BYTES = {
+    b'\xff\xd8\xff': 'image/jpeg',
+    b'\x89PNG': 'image/png',
+    b'GIF87a': 'image/gif',
+    b'GIF89a': 'image/gif',
+    b'RIFF': 'image/webp',
+}
 
 
 @asynccontextmanager
@@ -80,10 +92,19 @@ async def verify_image(file: UploadFile = File(...)):
     
     temp_file = None
     try:
+        content = await file.read()
+        
+        # Validate file size
+        if len(content) > MAX_FILE_SIZE:
+            raise HTTPException(status_code=400, detail=f"File too large. Max size: {MAX_FILE_SIZE // (1024*1024)}MB")
+        
+        # Validate magic bytes
+        is_valid_image = any(content.startswith(magic) for magic in ALLOWED_MAGIC_BYTES.keys())
+        if not is_valid_image:
+            raise HTTPException(status_code=400, detail="Invalid image file")
+        
         suffix = Path(file.filename).suffix or ".jpg"
         temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
-        
-        content = await file.read()
         temp_file.write(content)
         temp_file.close()
         
