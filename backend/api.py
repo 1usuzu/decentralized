@@ -17,10 +17,16 @@ from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import hashlib
 import tempfile
+from eth_account import Account
+from eth_account.messages import encode_defunct
+from web3 import Web3
 
 from detect import DeepfakeDetector
 
 detector = None
+
+# Oracle signer private key (load from environment in production!)
+ORACLE_PRIVATE_KEY = os.getenv("ORACLE_PRIVATE_KEY", "0x0000000000000000000000000000000000000000000000000000000000000001")
 
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 ALLOWED_MAGIC_BYTES = {
@@ -30,6 +36,24 @@ ALLOWED_MAGIC_BYTES = {
     b'GIF89a': 'image/gif',
     b'RIFF': 'image/webp',
 }
+
+
+def sign_verification_result(image_hash_hex: str, is_real: bool, confidence: int) -> str:
+    """Sign verification result with Oracle private key"""
+    # Convert to bytes32 format
+    image_hash_bytes = bytes.fromhex(image_hash_hex)
+    
+    # Create message hash matching contract's keccak256(abi.encodePacked(...))
+    message_hash = Web3.solidity_keccak(
+        ['bytes32', 'bool', 'uint256'],
+        [image_hash_bytes, is_real, confidence]
+    )
+    
+    # Sign the message
+    message = encode_defunct(message_hash)
+    signed = Account.sign_message(message, private_key=ORACLE_PRIVATE_KEY)
+    
+    return signed.signature.hex()
 
 
 @asynccontextmanager
@@ -111,12 +135,21 @@ async def verify_image(file: UploadFile = File(...)):
         image_hash = hashlib.sha256(content).hexdigest()
         result = detector.predict(temp_file.name)
         
+        # Create signature for blockchain verification
+        is_real = result["label"] == "REAL"
+        confidence_int = int(result["confidence"] * 10000)  # Convert to contract format
+        
+        signature = sign_verification_result(image_hash, is_real, confidence_int)
+        
         return {
             "label": result["label"],
             "confidence": result["confidence"],
             "real_prob": result["real_prob"],
             "fake_prob": result["fake_prob"],
             "image_hash": image_hash,
+            "image_hash_bytes32": "0x" + image_hash,  # For contract
+            "confidence_int": confidence_int,  # For contract
+            "signature": "0x" + signature,  # Oracle signature for contract
             "filename": file.filename
         }
         

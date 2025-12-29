@@ -8,11 +8,12 @@ import './App.css'
 // Contract ABI (simplified)
 const CONTRACT_ABI = [
   "function registerDID(string calldata _did, string calldata _publicKeyBase58) external",
-  "function recordVerification(bytes32 _imageHash, string calldata _subjectDid, bool _isReal, uint256 _confidence, bytes32 _credentialHash) external",
+  "function recordVerification(bytes32 _imageHash, string calldata _subjectDid, bool _isReal, uint256 _confidence, bytes32 _credentialHash, bytes calldata _signature) external",
   "function getVerification(bytes32 _imageHash) external view returns (tuple(bytes32 imageHash, string subjectDid, string issuerDid, bool isReal, uint256 confidence, uint256 timestamp, bytes32 credentialHash))",
   "function isImageVerified(bytes32 _imageHash) external view returns (bool)",
   "function didDocuments(address) external view returns (address owner, string did, string publicKeyBase58, bool isActive, uint256 createdAt, uint256 updatedAt)",
-  "function getStats() external view returns (uint256, uint256)"
+  "function getStats() external view returns (uint256, uint256)",
+  "function getOracleSigner() external view returns (address)"
 ];
 
 // Contract address (will be updated after deployment)
@@ -145,20 +146,19 @@ function App() {
       const result = await response.json();
       setVerificationResult(result);
 
-      // Record on blockchain if contract connected
-      if (contract && userDID) {
-        const imageHash = ethers.keccak256(new Uint8Array(await file.arrayBuffer()));
+      // Record on blockchain if contract connected and user has DID
+      if (contract && userDID && result.signature) {
         const isReal = result.label === "REAL";
-        const confidence = Math.round(result.confidence * 10000);
         const credentialHash = ethers.keccak256(ethers.toUtf8Bytes(JSON.stringify(result)));
 
         try {
           const tx = await contract.recordVerification(
-            imageHash,
+            result.image_hash_bytes32,  // bytes32 image hash from server
             userDID.did,
             isReal,
-            confidence,
-            credentialHash
+            result.confidence_int,  // uint256 confidence from server
+            credentialHash,
+            result.signature  // Oracle signature from server
           );
           await tx.wait();
           
@@ -171,7 +171,8 @@ function App() {
           console.log("Could not record on blockchain:", e);
           setVerificationResult(prev => ({
             ...prev,
-            onChain: false
+            onChain: false,
+            blockchainError: e.message
           }));
         }
       }

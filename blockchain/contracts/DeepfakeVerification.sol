@@ -64,6 +64,9 @@ contract DeepfakeVerification {
     // Owner của contract
     address public owner;
     
+    // Oracle signer address (AI Server's wallet)
+    address public oracleSigner;
+    
     // Counters
     uint256 public totalDIDs;
     uint256 public totalVerifications;
@@ -107,9 +110,20 @@ contract DeepfakeVerification {
     
     // ============ CONSTRUCTOR ============
     
-    constructor() {
+    constructor(address _oracleSigner) {
         owner = msg.sender;
+        oracleSigner = _oracleSigner;
         authorizedIssuers[msg.sender] = true;
+    }
+    
+    // ============ ADMIN FUNCTIONS ============
+    
+    /**
+     * @dev Cập nhật Oracle Signer (chỉ owner)
+     */
+    function setOracleSigner(address _newSigner) external onlyOwner {
+        require(_newSigner != address(0), "Invalid signer address");
+        oracleSigner = _newSigner;
     }
     
     // ============ DID MANAGEMENT ============
@@ -186,22 +200,38 @@ contract DeepfakeVerification {
     // ============ VERIFICATION MANAGEMENT ============
     
     /**
-     * @dev Ghi kết quả verification lên blockchain
+     * @dev Ghi kết quả verification lên blockchain (cần signature từ Oracle)
      * @param _imageHash SHA256 hash của ảnh
      * @param _subjectDid DID của subject
      * @param _isReal true = REAL, false = FAKE
      * @param _confidence Confidence * 10000 (ví dụ: 9182 = 91.82%)
      * @param _credentialHash Hash của Verifiable Credential
+     * @param _signature Signature từ Oracle Server để verify kết quả
      */
     function recordVerification(
         bytes32 _imageHash,
         string calldata _subjectDid,
         bool _isReal,
         uint256 _confidence,
-        bytes32 _credentialHash
+        bytes32 _credentialHash,
+        bytes calldata _signature
     ) external didExists(msg.sender) {
         require(_imageHash != bytes32(0), "Image hash cannot be empty");
         require(_confidence <= 10000, "Confidence must be <= 10000");
+        
+        // Verify signature from Oracle
+        bytes32 messageHash = keccak256(abi.encodePacked(
+            _imageHash,
+            _isReal,
+            _confidence
+        ));
+        bytes32 ethSignedHash = keccak256(abi.encodePacked(
+            "\x19Ethereum Signed Message:\n32",
+            messageHash
+        ));
+        
+        address recoveredSigner = recoverSigner(ethSignedHash, _signature);
+        require(recoveredSigner == oracleSigner, "Invalid oracle signature");
         
         verificationResults[_imageHash] = VerificationResult({
             imageHash: _imageHash,
@@ -334,5 +364,39 @@ contract DeepfakeVerification {
      */
     function getStats() external view returns (uint256 _totalDIDs, uint256 _totalVerifications) {
         return (totalDIDs, totalVerifications);
+    }
+    
+    // ============ SIGNATURE RECOVERY ============
+    
+    /**
+     * @dev Recover signer address from signature
+     */
+    function recoverSigner(bytes32 _ethSignedHash, bytes memory _signature) internal pure returns (address) {
+        require(_signature.length == 65, "Invalid signature length");
+        
+        bytes32 r;
+        bytes32 s;
+        uint8 v;
+        
+        assembly {
+            r := mload(add(_signature, 32))
+            s := mload(add(_signature, 64))
+            v := byte(0, mload(add(_signature, 96)))
+        }
+        
+        if (v < 27) {
+            v += 27;
+        }
+        
+        require(v == 27 || v == 28, "Invalid signature v value");
+        
+        return ecrecover(_ethSignedHash, v, r, s);
+    }
+    
+    /**
+     * @dev Get oracle signer address
+     */
+    function getOracleSigner() external view returns (address) {
+        return oracleSigner;
     }
 }
