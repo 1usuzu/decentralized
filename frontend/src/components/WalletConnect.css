@@ -1,10 +1,11 @@
 /* Wallet Connect Component */
 .wallet-connect {
-  background: white;
-  border: 1px solid var(--gray-200);
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  padding: 24px;
+  padding: 32px;
   margin-bottom: 24px;
+  box-shadow: var(--shadow);
 }
 
 /* Not Connected State */
@@ -17,33 +18,34 @@
 }
 
 .connect-icon {
-  width: 48px;
-  height: 48px;
-  background: var(--gray-100);
+  width: 64px;
+  height: 64px;
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
+  border: 1px solid var(--border);
 }
 
 .connect-icon svg {
-  width: 24px;
-  height: 24px;
-  color: var(--gray-500);
+  width: 32px;
+  height: 32px;
+  color: var(--text-muted);
 }
 
 .connect-section h3 {
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   font-weight: 600;
-  color: var(--gray-900);
+  color: var(--text-main);
   margin-bottom: 8px;
 }
 
 .connect-section p {
-  font-size: 0.875rem;
-  color: var(--gray-500);
-  margin-bottom: 20px;
+  font-size: 0.9375rem;
+  color: var(--text-muted);
+  margin-bottom: 24px;
   max-width: 400px;
 }
 
@@ -52,75 +54,84 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  gap: 10px;
+  padding: 12px 24px;
+  font-size: 0.9375rem;
+  font-weight: 600;
   border-radius: var(--radius);
-  border: none;
-  transition: all 0.2s;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
 }
 
 .btn-primary {
   background: var(--primary);
-  color: white;
+  color: #0f172a;
+  /* Dark text on bright button for contrast */
+  box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
 }
 
 .btn-primary:hover {
   background: var(--primary-dark);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
-  background: var(--gray-100);
-  color: var(--gray-700);
-  border: 1px solid var(--gray-200);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  border: 1px solid var(--border);
 }
 
 .btn-secondary:hover {
-  background: var(--gray-200);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--text-muted);
 }
 
 .btn-outline {
   background: transparent;
-  color: var(--gray-600);
-  border: 1px solid var(--gray-300);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
   padding: 8px 16px;
+  font-size: 0.875rem;
 }
 
 .btn-outline:hover {
-  background: var(--gray-50);
-  border-color: var(--gray-400);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  border-color: var(--text-muted);
 }
 
 .btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
 }
 
 /* Connected State */
 .connected-section {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .account-info {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 16px;
-  background: var(--gray-50);
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
 }
 
 .account-avatar {
   width: 40px;
   height: 40px;
-  background: var(--primary-light);
+  background: var(--primary-dark);
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.2);
 }
 
 .account-avatar svg {
@@ -137,24 +148,25 @@
 
 .account-label {
   font-size: 0.75rem;
-  color: var(--gray-500);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  font-weight: 600;
 }
 
 .account-address {
   font-family: 'SF Mono', Monaco, monospace;
-  font-size: 0.875rem;
+  font-size: 0.9375rem;
   font-weight: 500;
-  color: var(--gray-900);
+  color: var(--text-main);
 }
 
 /* DID Section */
 .did-section {
-  padding: 16px;
-  background: var(--gray-50);
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.5);
   border-radius: var(--radius);
-  border: 1px solid var(--gray-200);
+  border: 1px solid var(--border);
 }
 
 .did-warning {
@@ -168,82 +180,86 @@
   flex-shrink: 0;
   width: 20px;
   height: 20px;
-  color: var(--gray-400);
+  color: #fbbf24;
+  /* Amber */
 }
 
 .did-warning span {
   font-size: 0.875rem;
-  color: var(--gray-600);
+  color: var(--text-muted);
 }
 
 .did-active {
-  background: rgba(5, 150, 105, 0.05);
-  border-color: var(--success);
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.2);
 }
 
 .did-info {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
 }
 
 .did-icon {
-  width: 36px;
-  height: 36px;
-  background: var(--success);
+  width: 40px;
+  height: 40px;
+  background: rgba(16, 185, 129, 0.2);
   border-radius: var(--radius);
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--success);
 }
 
 .did-icon svg {
-  width: 18px;
-  height: 18px;
-  color: white;
+  width: 20px;
+  height: 20px;
+  color: currentColor;
 }
 
 .did-details {
   flex: 1;
   display: flex;
   flex-direction: column;
+  gap: 4px;
 }
 
 .did-label {
   font-size: 0.75rem;
-  color: var(--gray-500);
+  color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
 .did-value {
   font-family: 'SF Mono', Monaco, monospace;
-  font-size: 0.8125rem;
-  color: var(--gray-700);
+  font-size: 0.875rem;
+  color: var(--text-main);
 }
 
 .did-status {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 4px 10px;
+  gap: 6px;
+  padding: 4px 12px;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   border-radius: 9999px;
 }
 
 .did-status.active {
-  background: rgba(5, 150, 105, 0.1);
+  background: rgba(16, 185, 129, 0.1);
   color: var(--success);
+  border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 @media (max-width: 640px) {
   .account-info {
     flex-wrap: wrap;
   }
-  
+
   .account-info .btn-outline {
     width: 100%;
-    margin-top: 8px;
+    margin-top: 12px;
   }
 }

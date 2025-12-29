@@ -5,7 +5,17 @@ import ImageUpload from './components/ImageUpload'
 import VerificationResult from './components/VerificationResult'
 import './App.css'
 
-// ABI đã cập nhật hàm recordVerification mới
+// SVGs for Pillars
+const ShieldIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+)
+const BrainIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z"/><path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z"/></svg>
+)
+const LockIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+)
+
 const CONTRACT_ABI = [
   "function registerDID(string calldata _did, string calldata _publicKeyBase58) external",
   "function recordVerification(bytes32 _imageHash, bool _isReal, uint256 _confidence, bytes calldata _signature) external",
@@ -14,8 +24,7 @@ const CONTRACT_ABI = [
   "function getStats() external view returns (uint256, uint256)"
 ];
 
-// LƯU Ý: SAU KHI DEPLOY LẠI CONTRACT, HÃY CẬP NHẬT ĐỊA CHỈ MỚI VÀO ĐÂY
-const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x_DIA_CHI_CONTRACT_MOI_CUA_BAN";
+const CONTRACT_ADDRESS = import.meta.env.VITE_CONTRACT_ADDRESS || "0x_YOUR_CONTRACT_ADDRESS";
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 function App() {
@@ -45,7 +54,7 @@ function App() {
         if (didDoc.isActive) setUserDID(didDoc);
         const [dids, verifications] = await contractInstance.getStats();
         setStats({ totalDIDs: Number(dids), totalVerifications: Number(verifications) });
-      } catch (e) { console.log("Init data load error", e); }
+      } catch (e) { console.log("Init data load error (Contract might not be deployed yet)", e); }
 
     } catch (error) {
       console.error("Failed to connect wallet:", error);
@@ -86,10 +95,9 @@ function App() {
 
       const formData = new FormData();
       formData.append('file', file);
-      // QUAN TRỌNG: Gửi địa chỉ ví lên để Server ký
       formData.append('user_address', account); 
 
-      // 1. GỌI API AI
+      // 1. Call AI API
       const response = await fetch(`${API_URL}/api/verify`, {
         method: 'POST',
         body: formData
@@ -100,16 +108,11 @@ function App() {
       
       setVerificationResult(result);
 
-      // 2. GHI LÊN BLOCKCHAIN (Nếu user đã có DID)
+      // 2. Record on Blockchain (If user has DID)
       if (contract && userDID) {
         const isReal = result.label === "REAL";
         const confidence = Math.round(result.confidence * 10000);
-        
-        // Lấy chữ ký từ Server
         const signature = result.signature; 
-        console.log("Signature from server:", signature);
-
-        // Convert image_hash to bytes32 format
         const imageHashBytes32 = "0x" + result.image_hash;
 
         try {
@@ -117,9 +120,8 @@ function App() {
             imageHashBytes32,
             isReal,
             confidence,
-            "0x" + signature // <--- Gửi chữ ký vào Contract
+            "0x" + signature 
           );
-          console.log("Tx sent:", tx.hash);
           await tx.wait();
           
           setVerificationResult(prev => ({
@@ -130,7 +132,6 @@ function App() {
           alert("Đã lưu kết quả lên Blockchain an toàn!");
         } catch (e) {
           console.log("Blockchain Record Error:", e);
-          // Check lỗi cụ thể
           if (e.reason) alert("Lỗi Contract: " + e.reason);
           else alert("Không thể lưu lên Blockchain (Có thể do chữ ký sai hoặc lỗi mạng)");
           
@@ -152,29 +153,73 @@ function App() {
     <div className="app">
       <header className="header">
         <div className="header-content">
-          <div className="logo"><span className="logo-text">DeepfakeVerify</span></div>
+          <div className="logo">
+            <div className="logo-icon">
+              <ShieldIcon />
+            </div>
+            <span className="logo-text">DeepTrust<span style={{color: 'var(--primary)'}}>.AI</span></span>
+          </div>
         </div>
       </header>
 
       <main className="main">
         <div className="page-header">
-          <h1 className="page-title">Xác Thực Hình Ảnh Deepfake</h1>
+          <h1 className="page-title">
+            <span className="text-gradient">Trust But Verify</span><br />
+            in the Age of AI
+          </h1>
+          <p className="page-subtitle">
+            Secure, decentralized authentication powered by artificial intelligence and zero-knowledge proofs.
+          </p>
         </div>
 
-        <WalletConnect 
-          account={account} userDID={userDID}
-          onConnect={connectWallet} onDisconnect={() => {setAccount(null); setContract(null); setUserDID(null);}}
-          onRegisterDID={registerDID} loading={loading}
-        />
+        {/* 3 Pillars of the System */}
+        <div className="pillars-grid">
+          <div className="pillar-card pillar-did">
+            <div className="pillar-icon"><ShieldIcon /></div>
+            <h3 className="pillar-title">Decentralized Identity</h3>
+            <p className="pillar-desc">
+              You own your identity. No central server controls your data. Cryptographic proof of personhood ensures you are in control.
+            </p>
+          </div>
+          <div className="pillar-card pillar-ai">
+            <div className="pillar-icon"><BrainIcon /></div>
+            <h3 className="pillar-title">AI Deepfake Detection</h3>
+            <p className="pillar-desc">
+              Advanced neural networks analyze micro-expressions and artifacts to detect manipulated media with high precision.
+            </p>
+          </div>
+          <div className="pillar-card pillar-zkp">
+            <div className="pillar-icon"><LockIcon /></div>
+            <h3 className="pillar-title">Zero-Knowledge Proofs</h3>
+            <p className="pillar-desc">
+              Verify authenticity without revealing the underlying sensitive data. True privacy-preserving verification.
+            </p>
+          </div>
+        </div>
 
         <div className="stats-bar">
-          <div className="stat"><span className="stat-value">{stats.totalDIDs}</span><span className="stat-label">DIDs</span></div>
-          <div className="stat"><span className="stat-value">{stats.totalVerifications}</span><span className="stat-label">Verified</span></div>
+          <div className="stat">
+            <span className="stat-value">{stats.totalDIDs}</span>
+            <span className="stat-label">Identities Secured</span>
+          </div>
+          <div className="stat">
+            <span className="stat-value">{stats.totalVerifications}</span>
+            <span className="stat-label">Images Verified</span>
+          </div>
         </div>
 
-        <ImageUpload onUpload={verifyImage} loading={loading} />
+        <div className="action-container">
+          <WalletConnect 
+            account={account} userDID={userDID}
+            onConnect={connectWallet} onDisconnect={() => {setAccount(null); setContract(null); setUserDID(null);}}
+            onRegisterDID={registerDID} loading={loading}
+          />
 
-        {verificationResult && (<VerificationResult result={verificationResult} />)}
+          <ImageUpload onUpload={verifyImage} loading={loading} />
+
+          {verificationResult && (<VerificationResult result={verificationResult} />)}
+        </div>
       </main>
     </div>
   )
