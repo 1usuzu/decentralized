@@ -1,5 +1,16 @@
 import './VerificationResult.css'
 
+// Tự động chọn block explorer dựa trên Chain ID
+const getExplorerUrl = (txHash) => {
+  const chainId = import.meta.env.VITE_CHAIN_ID;
+  const explorers = {
+    '11155111': `https://sepolia.etherscan.io/tx/${txHash}`,
+    '80002': `https://amoy.polygonscan.com/tx/${txHash}`,
+    '31337': null // Hardhat local không có explorer
+  };
+  return explorers[chainId] || null;
+};
+
 function VerificationResult({ result }) {
   const isReal = result.label === 'REAL';
   const confidence = (result.confidence * 100).toFixed(1);
@@ -61,15 +72,18 @@ function VerificationResult({ result }) {
             </svg>
             <div className="status-details">
               <span className="status-text">Đã lưu lên blockchain</span>
-              {result.transactionHash && (
+              {result.transactionHash && getExplorerUrl(result.transactionHash) && (
                 <a 
-                  href={`https://amoy.polygonscan.com/tx/${result.transactionHash}`}
+                  href={getExplorerUrl(result.transactionHash)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="tx-link"
                 >
                   Xem transaction
                 </a>
+              )}
+              {result.transactionHash && !getExplorerUrl(result.transactionHash) && (
+                <span className="tx-hash">TX: {result.transactionHash.substring(0, 16)}...</span>
               )}
             </div>
           </div>

@@ -19,10 +19,11 @@ import tempfile
 from detect import DeepfakeDetector
 
 # --- CẤU HÌNH BẢO MẬT (PRIVATE KEY) ---
-# Đây là Private Key của ví Server (Authorized Issuer).
-# Ví dụ này dùng Account #0 mặc định của Hardhat.
-# Trong thực tế, bạn nên để nó trong file .env
-SERVER_PRIVATE_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80" 
+# Lấy từ biến môi trường. Nếu không có, dùng Hardhat Account #0 (chỉ dùng cho dev)
+SERVER_PRIVATE_KEY = os.environ.get(
+    "SERVER_PRIVATE_KEY", 
+    "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+) 
 
 detector = None
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
@@ -83,8 +84,7 @@ async def verify_image(
         # 2. Logic Ký số (Signing)
         # Tạo chuỗi thông điệp duy nhất để ký: "UserAddress:ImageHash:IsReal"
         is_real_str = "true" if result["label"] == "REAL" else "false"
-        msg_content = f"{user_address}:{image_hash}:{is_real_str}"
-        
+        msg_content = f"{user_address.lower()}:{image_hash}:{is_real_str}"        
         # Hash và Ký
         message = encode_defunct(text=msg_content)
         signed_message = Account.sign_message(message, private_key=SERVER_PRIVATE_KEY)
